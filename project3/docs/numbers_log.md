@@ -69,3 +69,30 @@ Raw numbers as I measured them, in order. The README quotes from here.
 ## 50,000 reached
 - 17:34:44: **60,117 raw records landed** (target 50,000)
 
+
+## Producer run 2 (Mon 16 Nov, also card D4)
+- Started 17:27:17, stopped 17:39:56 (Ctrl+C): **20,284 messages sent**, with one reconnect at 17:33 (card D4)
+- Topic total now: 47,979 (run 1) + 1 (D2 bad message) + 20,284 (run 2) = **68,264 Kafka records**
+- Expected final four numbers once the lander has landed everything: raw 68,264 + 1,000 (D1 copy) = **69,264** · malformed **1** · unique Kafka records **68,263** · unique trades = 68,263 minus the subscriptions and last_match messages
+
+## Final flow on the full data (Mon 16 Nov, 17:41, producer and lander stopped)
+Screenshot: docs/flow_log.png (flow run 'brown-catfish'). Two runs in a row gave the same numbers (idempotent).
+
+| Number | Full data |
+|---|---:|
+| Raw records landed | 69,264 |
+| Malformed (kept in raw) | 1 |
+| Unique Kafka records | 68,263 |
+| Unique trades | 68,242 |
+
+- raw − unique records = 1,001: the 1,000 records landed twice in D1 + the 1 malformed message
+- unique records − unique trades = 21: 3 `subscriptions` + 18 `last_match` messages (6 products × 3 connections), which are Kafka records but not new trades
+- four_numbers.py says 68,260 "unique product_id+trade_id" because it still counts the 18 last_match messages (they carry a trade_id); the flow drops them in the stage step
+- 186 one-minute windows (6 products)
+- Buyer-initiated share of USD volume: BTC-USD 46.4% (49,719 trades) · ETH-USD 38.8% (9,194) · SOL-USD 46.7% (3,380) · XRP-USD 61.9% (4,097) · DOGE-USD 28.3% (584) · ADA-USD 56.2% (1,268)
+- Batching detail: the lander closed a batch of only 137 records at 17:33:44 by the 60 s rule, during the Wi-Fi outage of card D4
+
+## Sample (Mon 16 Nov, 17:44)
+- `python kit/make_sample.py`: 5,000 random raw rows, 0.85 MB
+- `python flow.py data/sample` (run 'vigilant-nyala'): raw 5,000 · malformed 0 · unique Kafka records 4,994 · unique trades 4,992
+- The random sample missed the single malformed row (1 in 69,264), but it kept 6 of the D1 copies, so the DISTINCT step still has work to do on the sample

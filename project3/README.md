@@ -43,14 +43,14 @@ Answer each in 2-4 sentences, in your own words, with your own numbers.
 
 ## The four numbers
 
-From the flow log on the full data (screenshot in `docs/`):
+From the flow log on the full data (screenshot: [docs/flow_log.png](docs/flow_log.png), Prefect run 'brown-catfish') and on the committed sample (`python flow.py data/sample`, run 'vigilant-nyala'). Two runs in a row on the full data gave the same four numbers.
 
 | Number | Full data | Sample (`data/sample`) |
 |---|---:|---:|
-| Raw records landed | TODO | TODO |
-| Malformed (kept in raw) | TODO | TODO |
-| Unique Kafka records | TODO | TODO |
-| Unique TODO (your entity) | TODO | TODO |
+| Raw records landed | 69,264 | 5,000 |
+| Malformed (kept in raw) | 1 | 0 |
+| Unique Kafka records | 68,263 | 4,994 |
+| Unique trades | 68,242 | 4,992 |
 
 ## Challenges / Obstacles
 
