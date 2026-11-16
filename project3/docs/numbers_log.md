@@ -96,3 +96,9 @@ Screenshot: docs/flow_log.png (flow run 'brown-catfish'). Two runs in a row gave
 - `python kit/make_sample.py`: 5,000 random raw rows, 0.85 MB
 - `python flow.py data/sample` (run 'vigilant-nyala'): raw 5,000 · malformed 0 · unique Kafka records 4,994 · unique trades 4,992
 - The random sample missed the single malformed row (1 in 69,264), but it kept 6 of the D1 copies, so the DISTINCT step still has work to do on the sample
+
+## Final reruns after the flow.py fixes (Mon 16 Nov, 18:45)
+- Changes: sample gets its own coinbase_sample.duckdb and *_sample.png charts, `sequence` parsed from raw JSON, chart titles state the finding
+- Full data, runs 'legendary-hare' and 'fuzzy-lionfish': raw 69,264 · malformed 1 · unique Kafka records 68,263 · unique trades 68,242 (same both times)
+- Sample, runs 'humongous-taipan' and 'uber-ostrich': raw 5,000 · malformed 0 · unique Kafka records 4,994 · unique trades 4,992 (same both times)
+- Screenshots: docs/flow_log.png, docs/prefect_dashboard.png (fuzzy-lionfish), docs/flow_log_sample.png

@@ -18,10 +18,14 @@ matplotlib.use("Agg")  # draw to a file, no window
 import matplotlib.pyplot as plt
 from prefect import flow, get_run_logger, task
 
-DB = "coinbase.duckdb"
-RAW = (sys.argv[1] if len(sys.argv) > 1 else "data/raw") + "/*.parquet"
-CHART_MINUTES = "charts/buy_share_per_minute.png"
-CHART_PRODUCTS = "charts/buy_share_by_product.png"
+SRC = sys.argv[1] if len(sys.argv) > 1 else "data/raw"
+RAW = SRC.rstrip("/\\") + "/*.parquet"
+NAME = os.path.basename(SRC.rstrip("/\\"))  # "raw" or "sample"
+TAG = "" if NAME == "raw" else "_" + NAME
+DB = f"coinbase{TAG}.duckdb"  # coinbase_sample.duckdb for the sample
+# the sample never overwrites the full-data database or charts
+CHART_MINUTES = f"charts/buy_share_per_minute{TAG}.png"
+CHART_PRODUCTS = f"charts/buy_share_by_product{TAG}.png"
 
 
 @task(retries=2, retry_delay_seconds=5)
@@ -35,7 +39,8 @@ def load_raw():
 @task
 def stage():
     """Duplicate kind 1: the same Kafka record landed twice (at-least-once).
-    Then keep only real trades and give them proper types."""
+    Then keep only real trades, give them proper types and parse one field
+    the lander did not keep (sequence) from the raw JSON."""
     with duckdb.connect(DB) as con:
         con.execute("""
             CREATE OR REPLACE TABLE stg_records AS
@@ -51,6 +56,7 @@ def stage():
             SELECT kafka_partition, kafka_offset, product_id, trade_id,
                    CAST(event_time AS TIMESTAMPTZ) AT TIME ZONE 'UTC' AS trade_time,
                    price, size, price * size AS usd,
+                   CAST(raw::JSON ->> '$.data.sequence' AS BIGINT) AS sequence,  -- parsed from raw
                    CASE side WHEN 'sell' THEN 'buy' WHEN 'buy' THEN 'sell' END AS taker_side
             FROM stg_records
             WHERE msg_type = 'match'
@@ -121,6 +127,9 @@ def chart_minutes():
     with duckdb.connect(DB, read_only=True) as con:
         top = [r[0] for r in con.execute(
             "SELECT product_id FROM mart_pressure_product ORDER BY trades DESC LIMIT 2").fetchall()]
+        below = con.execute(
+            "SELECT avg(CASE WHEN buy_share < 0.5 THEN 1 ELSE 0 END) FROM mart_pressure_1min "
+            "WHERE product_id IN (SELECT unnest(?))", [top]).fetchone()[0]
         os.makedirs("charts", exist_ok=True)
         plt.figure(figsize=(10, 4.5))
         for product in top:
@@ -138,7 +147,9 @@ def chart_minutes():
             plt.plot(xs, ys, marker=".", label=product)
     plt.axhline(50, color="grey", linestyle="--", linewidth=1, label="balanced (50%)")
     plt.ylim(0, 100)
-    plt.title("Buying pressure per minute: share of USD volume from buyer-initiated trades")
+    leader, pct = ("Sellers", below) if below >= 0.5 else ("Buyers", 1 - below)
+    plt.title(f"{leader} led most minutes: buyers took {'under' if leader == 'Sellers' else 'over'} half "
+              f"the volume\nin {100 * pct:.0f}% of {' and '.join(top)} minutes")
     plt.xlabel("Trade time (UTC), 1-minute tumbling windows")
     plt.ylabel("Buyer-initiated share of volume (%)")
     plt.legend()
@@ -154,6 +165,8 @@ def chart_products():
     with duckdb.connect(DB, read_only=True) as con:
         rows = con.execute(
             "SELECT product_id, buy_share, trades FROM mart_pressure_product ORDER BY trades DESC").fetchall()
+        overall = con.execute(
+            "SELECT sum(buy_share * total_usd) / sum(total_usd) FROM mart_pressure_product").fetchone()[0]
     os.makedirs("charts", exist_ok=True)
     plt.figure(figsize=(8, 4.5))
     bars = plt.bar([r[0] for r in rows], [100 * r[1] for r in rows], color="#2a7fb8")
@@ -162,7 +175,11 @@ def chart_products():
                  ha="center", fontsize=8)
     plt.axhline(50, color="grey", linestyle="--", linewidth=1)
     plt.ylim(0, 100)
-    plt.title("Buyer-initiated share of USD volume by product (whole collection)")
+    leaned = [r[0] for r in rows if (r[1] > 0.5) == (overall < 0.5)]
+    side, other = ("Sellers", "buyers") if overall < 0.5 else ("Buyers", "sellers")
+    plt.title(f"{side} pushed harder overall: {100 * overall:.0f}% of USD volume was buyer-initiated\n"
+              f"Only {' and '.join([', '.join(leaned[:-1])] + leaned[-1:]) if len(leaned) > 1 else (leaned or ['no product'])[0]} "
+              f"leaned to {other}")
     plt.xlabel("Product")
     plt.ylabel("Buyer-initiated share of volume (%)")
     plt.tight_layout()

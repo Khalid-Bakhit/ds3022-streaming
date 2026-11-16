@@ -6,8 +6,8 @@ consumer group, file prefix, SCHEMA and to_row() changed (Appendix A, Session 2 
 A batch is written when it has 1000 records or is 60 seconds old.
 Offsets are stored only AFTER the file exists: at-least-once.
 
-  python quakes_lander.py
-  python quakes_lander.py crash   # experiment: crash after the first file, before storing offsets
+  python lander.py
+  python lander.py crash   # experiment: crash after the first file, before storing offsets
 """
 import json
 import os

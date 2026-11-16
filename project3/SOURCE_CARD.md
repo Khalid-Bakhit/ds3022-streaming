@@ -13,14 +13,25 @@
 Paste one message from the probe (shorten long text fields):
 
 ```json
-EDIT HERE (1): paste one message with "type": "match" from the probe output, from { to }
+{
+  "type": "match",
+  "trade_id": 1131972399,
+  "maker_order_id": "65d3a654-43fb-4b64-a3ac-638c7cf5ddcd",
+  "taker_order_id": "221a22fc-04dc-40a9-99fd-4a1aea6ee009",
+  "side": "buy",
+  "size": "0.0001569",
+  "price": "64099.59",
+  "product_id": "BTC-USD",
+  "sequence": 139572835589,
+  "time": "2026-11-16T15:34:56.638465Z"
+}
 ```
 
 ## 3. Volume maths
 - Measured rate (from the probe): 11.77 messages per second (706 messages in 60 s, 0 not JSON)
 - Live capture needed for 50,000: about 71 minutes (4,250 s)
 - History / backfill available? How many days? None. The WebSocket has no history, so every record is collected live
-- My plan to reach 50,000 raw records by the start of Session 3 (Thu 12 Nov): EDIT HERE (2): run the producer for about 2 hours on <when>, about 85,000 messages at the measured rate. Trading is quieter at night, so 2 hours gives margin over the 71-minute minimum. The lander runs at the same time so the raw count can be checked before Thursday.
+- My plan to reach 50,000 raw records by the start of Session 3 (Thu 12 Nov): Run the producer and lander together for about 2 hours, which is about 85,000 messages at the measured rate. Since trading can be quieter at night, 2 hours gives margin over the 71-minute minimum, and with the lander running at the same time I can check the raw count before Thursday. What actually happened: I did not collect before Thursday. I started on Mon 16 Nov in the afternoon, the rate was 47.7 messages/s (about 4 times the probe) so the raw count was already over 50,000 by 17:34 (60,117 raw records).
 
 ## 4. Topic design
 - Topic name: coinbase_trades (created with `-p 3 -r 3` **before** the producer runs)
@@ -33,17 +44,16 @@ EDIT HERE (1): paste one message with "type": "match" from the probe output, fro
 - If the same thing can arrive in several versions, which one do I keep? A trade never changes after it happens, so there is only one version and any copy can be kept. The `subscriptions` and `last_match` messages are not new trades (last_match repeats a past trade) and are dropped in the stage step.
 
 ## 6. Research question (draft)
-- One question I could answer with time windows, a comparison, an anomaly or a join: EDIT HERE (3): Is there more buying or selling pressure, and does it differ by product? Share of buy volume per product in 1-minute tumbling windows by trade time.
+- One question I could answer with time windows, a comparison, an anomaly or a join: Is there more buying or selling pressure, and does it differ by product? Share of buy volume per product in 1-minute tumbling windows by trade time.
 
 ## 7. Self-check (checkpoint A)
 Tick a box by changing `[ ]` to `[x]`. If a box stays empty, fix the card or choose another source from SOURCES.md. `kit/check_project.py` counts these boxes.
 
-EDIT HERE (4): read each line, change [ ] to [x] only if you agree, then delete this line
-
-- [ ] I ran the probe for this source today and messages arrived (own idea: it worked here, in class)
-- [ ] The rate in section 3 is measured, not guessed
+- [x] I ran the probe for this source today and messages arrived (own idea: it worked here, in class)
+- [x] The rate in section 3 is measured, not guessed
 - [ ] My volume plan reaches 50,000 raw records before Session 3 (Thu 12 Nov), with margin
-- [ ] It needs no API key or account that takes days to get
-- [ ] My key has a reason that fits my question
-- [ ] I named both kinds of duplicates for my source
-- [ ] My draft question can be answered with a time window, a comparison, an anomaly or a join
+  - Not ticked: the plan had margin, but I did not collect before Thursday. I passed 50,000 on Mon 16 Nov (see section 3).
+- [x] It needs no API key or account that takes days to get
+- [x] My key has a reason that fits my question
+- [x] I named both kinds of duplicates for my source
+- [x] My draft question can be answered with a time window, a comparison, an anomaly or a join
