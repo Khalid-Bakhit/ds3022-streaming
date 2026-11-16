@@ -72,7 +72,7 @@ def write_batch(rows):
 
 
 def main():
-    app = Application(broker_address=BROKER, consumer_group="coinbase_trades_lander",
+    app = Application(broker_address=BROKER, consumer_group="coinbase_trades_lander_v2",
                       auto_offset_reset="earliest", loglevel="WARNING")
     with app.get_consumer() as consumer:
         consumer.subscribe([TOPIC])
